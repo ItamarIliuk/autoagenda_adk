@@ -7,6 +7,12 @@ Este projeto implementa um agente de agendamento de manutenção automotiva util
 1. Consultar o histórico de manutenção de veículos em uma planilha do Google Sheets
 2. Verificar horários disponíveis no Google Calendar
 3. Agendar novas manutenções, registrando na planilha e criando eventos no calendário
+4. Este projeto atende a demanda de um cliente específico, mas pode ser adaptado para outros casos de uso
+5. O agente foi encomendado pela AutoMecânica Glavão de Ponta Grossa - PR
+6. O projeto foi desenvolvido por [Itamar Iliuk](https://github.com/ItamarIliuk) e é parte do meu portfólio de projetos.
+7. O projeto foi desenvolvido com o apoio do Google Cloud e do Google AI Studio, utilizando a API Gemini para processamento de linguagem natural.
+8. O projeto é uma demonstração de como integrar serviços do Google Cloud com um agente conversacional, utilizando o Google ADK para facilitar a construção e implementação do agente.
+9. O projeto é uma prova de conceito e pode ser expandido para incluir mais funcionalidades, como integração com outros serviços de agendamento ou suporte a múltiplos idiomas
 
 ## Estrutura do Projeto
 
