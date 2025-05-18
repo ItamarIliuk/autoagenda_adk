@@ -147,7 +147,7 @@ def registrar_manutencao_planilha(
     data_agendamento: str,
     hora_agendamento: str, 
     servico_agendado: str, 
-    observacoes: str = ""
+    observacoes: str
 ) -> Dict[str, Any]:
     """
     Registra um novo agendamento de manutenção na planilha do Google Sheets.
@@ -162,7 +162,7 @@ def registrar_manutencao_planilha(
         data_agendamento (str): Data do agendamento (formato YYYY-MM-DD).
         hora_agendamento (str): Hora do agendamento (formato HH:MM).
         servico_agendado (str): Descrição do serviço agendado.
-        observacoes (str, opcional): Observações adicionais.
+        observacoes (str): Observações adicionais. Use string vazia se não houver observações.
         
     Returns:
         dict: Dicionário contendo status da operação ('success' ou 'error') e 
@@ -224,13 +224,13 @@ def registrar_manutencao_planilha(
             "error_message": f"Erro ao registrar manutenção no Google Sheets: {e}"
         }
 
-def verificar_disponibilidade_agenda(data_iso: str, duracao_minutos: int = 60) -> Dict[str, Any]:
+def verificar_disponibilidade_agenda(data_iso: str, duracao_minutos: int) -> Dict[str, Any]:
     """
     Verifica a disponibilidade de horários na agenda do Google Calendar para uma data específica.
     
     Args:
         data_iso (str): Data no formato ISO (YYYY-MM-DD).
-        duracao_minutos (int, opcional): Duração do compromisso em minutos. Padrão é 60 minutos.
+        duracao_minutos (int): Duração do compromisso em minutos.
         
     Returns:
         dict: Dicionário contendo status da operação ('success' ou 'error'),
@@ -324,8 +324,8 @@ def criar_evento_agenda(
     data_iso: str, 
     hora_inicio: str, 
     duracao_minutos: int,
-    descricao: str = "", 
-    email_convidado: Optional[str] = None
+    descricao: str, 
+    email_convidado: str
 ) -> Dict[str, Any]:
     """
     Cria um evento no Google Calendar.
@@ -335,8 +335,8 @@ def criar_evento_agenda(
         data_iso (str): Data no formato ISO (YYYY-MM-DD).
         hora_inicio (str): Hora de início no formato HH:MM.
         duracao_minutos (int): Duração do evento em minutos.
-        descricao (str, opcional): Descrição do evento.
-        email_convidado (str, opcional): Email do convidado para o evento.
+        descricao (str): Descrição do evento. Use string vazia se não houver descrição.
+        email_convidado (str): Email do convidado para o evento. Use string vazia se não houver convidados.
         
     Returns:
         dict: Dicionário contendo status da operação ('success' ou 'error'),
@@ -374,7 +374,7 @@ def criar_evento_agenda(
         
         # Adiciona convidados se especificado
         attendees = []
-        if email_convidado:
+        if email_convidado and email_convidado.strip():  # Verifica se o email não é vazio
             attendees.append({'email': email_convidado})
             event['attendees'] = attendees
             send_notifications = True
@@ -447,7 +447,7 @@ autoagenda_agent = Agent(
       - Se o status retornado for "success", apresente os dados do histórico de forma organizada.
       - Se o status for "error", informe o erro ao usuário e peça informações adicionais se necessário.
     
-    - verificar_disponibilidade_agenda: Use esta ferramenta quando o usuário quiser verificar horários disponíveis para agendamento. Você precisa da data (formato YYYY-MM-DD) e opcionalmente da duração em minutos (padrão é 60 minutos).
+    - verificar_disponibilidade_agenda: Use esta ferramenta quando o usuário quiser verificar horários disponíveis para agendamento. Você precisa da data (formato YYYY-MM-DD) e da duração em minutos.
       - Se o status retornado for "success", apresente os horários disponíveis de forma organizada.
       - Se não houver horários disponíveis, sugira datas alternativas.
       - Se o status for "error", informe o erro ao usuário.
@@ -507,23 +507,51 @@ def run_interactive():
     print("-" * 50)
     
     while True:
-        user_input = input("\nVocê: ")
+        user_input = input("Você: ")
         if user_input.lower() == 'sair':
             print("\nAgente: Entendido. Até logo!")
             break
         
-        print("Agente: Processando...")
+        print("Agente: Processando...", end="\r")  # Use \r para sobrescrever a linha
         content = types.Content(role="user", parts=[types.Part(text=user_input)])
         final_response = ""
-        # Itera assincronamente pelos eventos retornados durante a execução do agente
-        for event in runner.run(user_id=USER_ID, session_id=SESSION_ID, new_message=content):
-            if event.is_final_response():
-               for part in event.content.parts:
-                  if part.text is not None:
-                     final_response += part.text
-                     final_response += "\n"
+        
+        try:
+            # Captura a saída padrão temporariamente para suprimir mensagens de erro
+            import sys
+            import io
+            original_stdout = sys.stdout
+            sys.stdout = io.StringIO()
+            
+            # Itera assincronamente pelos eventos retornados durante a execução do agente
+            for event in runner.run(user_id=USER_ID, session_id=SESSION_ID, new_message=content):
+                if event.is_final_response():
+                    for part in event.content.parts:
+                        if part.text is not None:
+                            final_response += part.text
+                            final_response += "\n"
+            
+            # Restaura stdout
+            sys.stdout = original_stdout
+            
+        except Exception as e:
+            # Restaura stdout em caso de exceção
+            try:
+                sys.stdout = original_stdout
+            except:
+                pass
+                
+            # Captura erros na execução do agente e continua
+            print(f"Erro interno: {str(e)}")
+            final_response = "Desculpe, ocorreu um erro interno. Por favor, tente novamente."
 
-        print(f"\nAgente: {final_response}")
+        # Filtra mensagens de erro específicas relacionadas a valores padrão
+        if "Default value is not supported in function declaration schema for Google AI" in final_response:
+            final_response = final_response.replace("Default value is not supported in function declaration schema for Google AI.", "")
+        
+        # Limpa a linha de processamento e imprime a resposta final
+        print(" " * 30, end="\r")  # Limpa a linha "Processando..."
+        print(f"\nAgente: {final_response.strip()}")
 
 # Ponto de entrada para execução direta do script
 if __name__ == "__main__":
