@@ -517,11 +517,13 @@ def run_interactive():
         final_response = ""
         
         try:
-            # Captura a saída padrão temporariamente para suprimir mensagens de erro
+            # Captura a saída padrão e de erro temporariamente para suprimir mensagens
             import sys
             import io
             original_stdout = sys.stdout
+            original_stderr = sys.stderr
             sys.stdout = io.StringIO()
+            sys.stderr = io.StringIO()
             
             # Itera assincronamente pelos eventos retornados durante a execução do agente
             for event in runner.run(user_id=USER_ID, session_id=SESSION_ID, new_message=content):
@@ -531,13 +533,15 @@ def run_interactive():
                             final_response += part.text
                             final_response += "\n"
             
-            # Restaura stdout
+            # Restaura stdout e stderr
             sys.stdout = original_stdout
+            sys.stderr = original_stderr
             
         except Exception as e:
-            # Restaura stdout em caso de exceção
+            # Restaura stdout e stderr em caso de exceção
             try:
                 sys.stdout = original_stdout
+                sys.stderr = original_stderr
             except:
                 pass
                 
@@ -548,6 +552,11 @@ def run_interactive():
         # Filtra mensagens de erro específicas relacionadas a valores padrão
         if "Default value is not supported in function declaration schema for Google AI" in final_response:
             final_response = final_response.replace("Default value is not supported in function declaration schema for Google AI.", "")
+        
+        # Filtra mensagens de aviso sobre partes não textuais na resposta
+        warning_text = "Warning: there are non-text parts in the response: ['function_call'],returning concatenated text result from text parts,check out the non text parts for full response from model."
+        if warning_text in final_response:
+            final_response = final_response.replace(warning_text, "")
         
         # Limpa a linha de processamento e imprime a resposta final
         print(" " * 30, end="\r")  # Limpa a linha "Processando..."
